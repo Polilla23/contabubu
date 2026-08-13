@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuenta regresiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Barlow+Condensed:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fondo:#152430;
+    --fondo-2:#0e1a24;
+    --carta:#171a1f;
+    --carta-arriba:#1e2228;
+    --digito:#f4eee1;
+    --ambar:#f2a93b;
+    --linea:#2c4356;
+    --texto-suave:#8ba3b5;
+    --alto-carta:clamp(90px,18vw,170px);
+    --ancho-carta:clamp(62px,12.5vw,118px);
+    --alto-chico:clamp(54px,9vw,84px);
+    --ancho-chico:clamp(38px,6.5vw,60px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    min-height:100vh;
+    background:radial-gradient(ellipse at 50% -20%, var(--fondo) 0%, var(--fondo-2) 70%);
+    color:var(--digito);
+    font-family:'Barlow Condensed',system-ui,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+    gap:8px;
+  }
+  .titulo{
+    font-family:'Oswald',system-ui,sans-serif;
+    font-weight:700;
+    font-size:clamp(22px,5vw,44px);
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    text-align:center;
+  }
+  .subtitulo{
+    color:var(--texto-suave);
+    font-size:clamp(14px,2.5vw,18px);
+    letter-spacing:.25em;
+    text-transform:uppercase;
+    margin-bottom:28px;
+    text-align:center;
+  }
+  .bloque{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .grupo{display:flex;gap:clamp(6px,1.2vw,12px)}
+  .etiqueta{
+    color:var(--ambar);
+    font-family:'Oswald',sans-serif;
+    font-weight:500;
+    font-size:clamp(13px,2.2vw,17px);
+    letter-spacing:.35em;
+    text-transform:uppercase;
+    padding-left:.35em;
+  }
+  .fila-chica{
+    display:flex;
+    gap:clamp(14px,3vw,30px);
+    margin-top:30px;
+    align-items:flex-start;
+  }
+  .sep{
+    font-family:'Oswald',sans-serif;
+    font-size:calc(var(--alto-chico)*.55);
+    line-height:var(--alto-chico);
+    color:var(--linea);
+    user-select:none;
+  }
+
+  /* ---- carta flip ---- */
+  .digit{
+    position:relative;
+    width:var(--ancho-carta);
+    height:var(--alto-carta);
+    perspective:600px;
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:calc(var(--alto-carta)*.72);
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,.45);
+  }
+  .digit.chico{
+    width:var(--ancho-chico);
+    height:var(--alto-chico);
+    font-size:calc(var(--alto-chico)*.72);
+    border-radius:6px;
+    box-shadow:0 4px 12px rgba(0,0,0,.4);
+  }
+  .half{
+    position:absolute;left:0;width:100%;height:50%;
+    overflow:hidden;
+  }
+  .half.top{top:0;border-radius:8px 8px 0 0;background:linear-gradient(var(--carta-arriba),var(--carta));}
+  .half.bottom{bottom:0;border-radius:0 0 8px 8px;background:linear-gradient(var(--carta),#101216);}
+  .digit.chico .half.top{border-radius:6px 6px 0 0}
+  .digit.chico .half.bottom{border-radius:0 0 6px 6px}
+  .half span, .flap span{
+    position:absolute;left:0;width:100%;height:200%;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--digito);
+  }
+  .half.top span{top:0}
+  .half.bottom span{bottom:0}
+
+  /* bisagra */
+  .digit::after{
+    content:"";
+    position:absolute;left:0;top:50%;width:100%;height:2px;
+    transform:translateY(-1px);
+    background:rgba(0,0,0,.65);
+    z-index:6;
+  }
+  .digit::before{
+    content:"";
+    position:absolute;top:50%;width:100%;height:8px;
+    transform:translateY(-4px);
+    background:linear-gradient(rgba(0,0,0,.35),transparent 40%,transparent 60%,rgba(0,0,0,.35));
+    z-index:5;pointer-events:none;
+  }
+
+  .flap{
+    position:absolute;left:0;width:100%;height:50%;
+    overflow:hidden;
+    backface-visibility:hidden;
+    display:none;
+    z-index:4;
+  }
+  .flap.flap-top{
+    top:0;border-radius:8px 8px 0 0;
+    background:linear-gradient(var(--carta-arriba),var(--carta));
+    transform-origin:bottom;
+  }
+  .flap.flap-bottom{
+    bottom:0;border-radius:0 0 8px 8px;
+    background:linear-gradient(var(--carta),#101216);
+    transform-origin:top;
+    transform:rotateX(90deg);
+  }
+  .flap.flap-top span{top:0}
+  .flap.flap-bottom span{bottom:0}
+
+  .digit.flipping .flap{display:block}
+  .digit.flipping .flap-top{animation:bajar .28s ease-in forwards}
+  .digit.flipping .flap-bottom{animation:subir .28s ease-out .28s forwards}
+  @keyframes bajar{from{transform:rotateX(0)}to{transform:rotateX(-90deg)}}
+  @keyframes subir{from{transform:rotateX(90deg)}to{transform:rotateX(0)}}
+
+  @media (prefers-reduced-motion: reduce){
+    .digit.flipping .flap{display:none}
+  }
+
+  .fecha-destino{
+    margin-top:34px;
+    color:var(--texto-suave);
+    letter-spacing:.15em;
+    font-size:clamp(13px,2.2vw,16px);
+    text-transform:uppercase;
+  }
+  .llego{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    color:var(--ambar);
+    font-size:clamp(34px,8vw,72px);
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    text-shadow:0 0 24px rgba(242,169,59,.45);
+    animation:latido 1.2s ease-in-out infinite;
+  }
+  @keyframes latido{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+  /* ---- pantalla de configuración ---- */
+  .config{
+    background:var(--carta);
+    border:1px solid var(--linea);
+    border-radius:12px;
+    padding:32px 28px;
+    max-width:440px;width:100%;
+    display:flex;flex-direction:column;gap:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .config h1{
+    font-family:'Oswald',sans-serif;font-weight:700;
+    font-size:24px;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .config p{color:var(--texto-suave);font-size:16px;line-height:1.4}
+  .config label{
+    display:flex;flex-direction:column;gap:6px;
+    font-size:14px;letter-spacing:.15em;text-transform:uppercase;color:var(--ambar);
+  }
+  .config input{
+    background:var(--fondo-2);
+    border:1px solid var(--linea);
+    border-radius:8px;
+    color:var(--digito);
+    font-family:inherit;font-size:17px;
+    padding:10px 12px;
+    color-scheme:dark;
+  }
+  .config input:focus{outline:2px solid var(--ambar);outline-offset:1px}
+  .config button{
+    background:var(--ambar);
+    border:none;border-radius:8px;
+    font-family:'Oswald',sans-serif;font-weight:500;
+    font-size:17px;letter-spacing:.12em;text-transform:uppercase;
+    padding:12px;cursor:pointer;color:#1a1408;
+  }
+  .config button:hover{filter:brightness(1.08)}
+  .config button:focus-visible{outline:2px solid var(--digito);outline-offset:2px}
+  .link-generado{
+    display:none;flex-direction:column;gap:8px;
+  }
+  .link-generado.visible{display:flex}
+  .link-generado code{
+    background:var(--fondo-2);
+    border:1px dashed var(--linea);
+    border-radius:8px;
+    padding:10px;
+    font-size:13px;
+    word-break:break-all;
+    color:var(--texto-suave);
+  }
+  .acciones{display:flex;gap:10px}
+  .acciones button{flex:1}
+  .btn-sec{background:transparent !important;border:1px solid var(--linea) !important;color:var(--digito) !important}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const hasta = params.get('hasta');      // YYYY-MM-DD o YYYY-MM-DDTHH:mm
+  const titulo = params.get('titulo') || 'Cuenta regresiva';
+  const app = document.getElementById('app');
+
+  /* ============ MODO CONFIGURACIÓN ============ */
+  if(!hasta){
+    app.innerHTML = `
+      <div class="config">
+        <h1>Armar contador</h1>
+        <p>Elegí la fecha objetivo y (si querés) un título. Te genero el link para compartir.</p>
+        <label>Fecha y hora
+          <input type="datetime-local" id="inp-fecha">
+        </label>
+        <label>Título (opcional)
+          <input type="text" id="inp-titulo" maxlength="60" placeholder="Ej: Final de la KML">
+        </label>
+        <button id="btn-generar">Generar link</button>
+        <div class="link-generado" id="resultado">
+          <code id="link-txt"></code>
+          <div class="acciones">
+            <button id="btn-copiar" class="btn-sec">Copiar</button>
+            <button id="btn-ver">Ver contador</button>
+          </div>
+        </div>
+      </div>`;
+
+    let urlGenerada = '';
+    document.getElementById('btn-generar').addEventListener('click', ()=>{
+      const f = document.getElementById('inp-fecha').value;
+      if(!f){ document.getElementById('inp-fecha').focus(); return; }
+      const t = document.getElementById('inp-titulo').value.trim();
+      const q = new URLSearchParams();
+      q.set('hasta', f);
+      if(t) q.set('titulo', t);
+      urlGenerada = location.origin + location.pathname + '?' + q.toString();
+      document.getElementById('link-txt').textContent = urlGenerada;
+      document.getElementById('resultado').classList.add('visible');
+    });
+    document.getElementById('resultado').addEventListener('click',(e)=>{
+      if(e.target.id==='btn-copiar'){
+        navigator.clipboard.writeText(urlGenerada).then(()=>{
+          e.target.textContent='¡Copiado!';
+          setTimeout(()=>e.target.textContent='Copiar',1500);
+        });
+      }
+      if(e.target.id==='btn-ver'){ location.href = urlGenerada; }
+    });
+    return;
+  }
+
+  /* ============ MODO CONTADOR ============ */
+  const target = new Date(hasta.length<=10 ? hasta+'T00:00:00' : hasta);
+  if(isNaN(target)){
+    app.innerHTML = '<div class="config"><h1>Fecha inválida</h1><p>El parámetro <b>hasta</b> tiene que ser una fecha tipo 2026-12-31 o 2026-12-31T21:30.</p></div>';
+    return;
+  }
+
+  const fmtFecha = target.toLocaleDateString('es-AR',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  app.innerHTML = `
+    <div class="titulo">${escapeHtml(titulo)}</div>
+    <div class="subtitulo">Faltan</div>
+    <div class="bloque">
+      <div class="grupo" id="grupo-dias"></div>
+      <div class="etiqueta">Días</div>
+    </div>
+    <div class="fila-chica">
+      <div class="bloque"><div class="grupo" id="grupo-hs"></div><div class="etiqueta">Hs</div></div>
+      <div class="sep">:</div>
+      <div class="bloque"><div class="grupo" id="grupo-min"></div><div class="etiqueta">Min</div></div>
+      <div class="sep">:</div>
+      <div class="bloque"><div class="grupo" id="grupo-seg"></div><div class="etiqueta">Seg</div></div>
+    </div>
+    <div class="fecha-destino">${fmtFecha}</div>`;
+
+  function escapeHtml(s){
+    const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+  }
+
+  function crearDigito(chico){
+    const el=document.createElement('div');
+    el.className='digit'+(chico?' chico':'');
+    el.innerHTML =
+      '<div class="half top"><span>0</span></div>'+
+      '<div class="half bottom"><span>0</span></div>'+
+      '<div class="flap flap-top"><span>0</span></div>'+
+      '<div class="flap flap-bottom"><span>0</span></div>';
+    el.dataset.value='0';
+    return el;
+  }
+
+  function setDigito(el, val){
+    if(el.dataset.value === val) return;
+    const old = el.dataset.value;
+    el.dataset.value = val;
+    const [top, bottom, flapTop, flapBottom] = ['half.top','half.bottom','flap-top','flap-bottom']
+      .map(c=>el.querySelector('.'+c+' span'));
+    // top pasa al nuevo valor (queda detrás del flap que baja mostrando el viejo)
+    top.textContent = val;
+    flapTop.textContent = old;
+    flapBottom.textContent = val;
+    el.classList.remove('flipping');
+    void el.offsetWidth; // reinicia animación
+    el.classList.add('flipping');
+    const fin = ()=>{
+      bottom.textContent = val;
+      el.classList.remove('flipping');
+      el.querySelector('.flap-bottom').removeEventListener('animationend', fin);
+    };
+    el.querySelector('.flap-bottom').addEventListener('animationend', fin);
+    // fallback por si reduced-motion desactiva la animación
+    setTimeout(()=>{ bottom.textContent = val; }, 700);
+  }
+
+  function renderGrupo(id, str, chico){
+    const g = document.getElementById(id);
+    while(g.children.length < str.length) g.prepend(crearDigito(chico));
+    while(g.children.length > str.length) g.removeChild(g.firstChild);
+    [...g.children].forEach((d,i)=> setDigito(d, str[i]));
+  }
+
+  function tick(){
+    const diff = target - Date.now();
+    if(diff <= 0){
+      app.innerHTML = `
+        <div class="titulo">${escapeHtml(titulo)}</div>
+        <div style="height:20px"></div>
+        <div class="llego">¡Llegó el día!</div>
+        <div class="fecha-destino">${fmtFecha}</div>`;
+      clearInterval(intervalo);
+      return;
+    }
+    const seg = Math.floor(diff/1000);
+    const dias = Math.floor(seg/86400);
+    const hs   = Math.floor((seg%86400)/3600);
+    const min  = Math.floor((seg%3600)/60);
+    const s    = seg%60;
+    renderGrupo('grupo-dias', String(dias).padStart(2,'0'), false);
+    renderGrupo('grupo-hs',  String(hs).padStart(2,'0'), true);
+    renderGrupo('grupo-min', String(min).padStart(2,'0'), true);
+    renderGrupo('grupo-seg', String(s).padStart(2,'0'), true);
+  }
+
+  tick();
+  const intervalo = setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
